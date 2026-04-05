@@ -193,6 +193,62 @@ def generate_path(viewpoint_cameras, n_frames=480):
 
   return traj
 
+import json
+import numpy as np
+
+def extract_camera_metadata(cam, frame_idx):
+    # --- Extrinsics ---
+    w2c = cam.world_view_transform.T.cpu().numpy()  # 4x4
+    c2w = np.linalg.inv(w2c)
+
+    # --- Intrinsics ---
+    W, H = cam.image_width, cam.image_height
+    fx = W / (2 * np.tan(cam.FoVx / 2))
+    fy = H / (2 * np.tan(cam.FoVy / 2))
+    K = np.array([[fx, 0, W/2],
+                  [0, fy, H/2],
+                  [0,  0,   1]])
+
+    return {
+        "frame_idx": frame_idx,
+
+        # Video pairing
+        "image_path": f"frame_{frame_idx:05d}.png",  # match your render output
+
+        # Intrinsics
+        "K": K.tolist(),
+        "width": W,
+        "height": H,
+        "fx": fx, "fy": fy,
+        "cx": W / 2, "cy": H / 2,
+        "FoVx": cam.FoVx,
+        "FoVy": cam.FoVy,
+
+        # Extrinsics
+        "w2c": w2c.tolist(),    # world-to-camera (what renderers use)
+        "c2w": c2w.tolist(),    # camera-to-world (what NeRF-style datasets use)
+
+        # Camera center in world space
+        "camera_center": cam.camera_center.cpu().tolist(),
+    }
+
+
+def build_trajectory_dataset(traj_cameras, output_dir):
+    """
+    traj = generate_path(scene.getTrainCameras(), n_frames=240)
+    build_trajectory_dataset(traj, traj_dir)
+    """
+    metadata = []
+    for i, cam in enumerate(traj_cameras):
+        meta = extract_camera_metadata(cam, i)
+        metadata.append(meta)
+
+    # Save as JSON alongside your rendered frames
+    with open(os.path.join(output_dir, "cameras.json"), "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    return metadata
+
 def load_img(pth: str) -> np.ndarray:
   """Load an image and cast to float32."""
   with open(pth, 'rb') as f:

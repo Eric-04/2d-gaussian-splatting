@@ -21,7 +21,7 @@ from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_renderer import GaussianModel
 from utils.mesh_utils import GaussianExtractor, to_cam_open3d, post_process_mesh
-from utils.render_utils import generate_path, create_videos
+from utils.render_utils import generate_path, create_videos, build_trajectory_dataset
 
 import open3d as o3d
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         gaussExtractor.reconstruction(scene.getTestCameras())
         gaussExtractor.export_image(test_dir)
     
-    
+    import pdb; pdb.set_trace()
     if args.render_path:
         print("render videos ...")
         traj_dir = os.path.join(args.model_path, 'traj', "ours_{}".format(scene.loaded_iter))
@@ -78,6 +78,8 @@ if __name__ == "__main__":
         cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames)
         gaussExtractor.reconstruction(cam_traj)
         gaussExtractor.export_image(traj_dir)
+
+        build_trajectory_dataset(cam_traj, traj_dir)
         create_videos(base_dir=traj_dir,
                     input_dir=traj_dir, 
                     out_name='render_traj', 
