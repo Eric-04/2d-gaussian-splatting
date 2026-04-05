@@ -69,7 +69,6 @@ if __name__ == "__main__":
         gaussExtractor.reconstruction(scene.getTestCameras())
         gaussExtractor.export_image(test_dir)
     
-    import pdb; pdb.set_trace()
     if args.render_path:
         print("render videos ...")
         traj_dir = os.path.join(args.model_path, 'traj', "ours_{}".format(scene.loaded_iter))
