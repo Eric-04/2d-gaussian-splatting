@@ -74,7 +74,9 @@ if __name__ == "__main__":
         traj_dir = os.path.join(args.model_path, 'traj', "ours_{}".format(scene.loaded_iter))
         os.makedirs(traj_dir, exist_ok=True)
         n_fames = 240
-        cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames)
+
+        # "orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"
+        cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory="truck")
         gaussExtractor.reconstruction(cam_traj)
         gaussExtractor.export_image(traj_dir)
 

@@ -22,6 +22,7 @@ from PIL import Image
 import mediapy as media
 from matplotlib import cm
 from tqdm import tqdm
+from utils.traj_utils import _new_poses_pan, _new_poses_tilt, _new_poses_dolly, _new_poses_truck, _new_poses_pedestal, _new_poses_zoom, _apply_zoom
 
 import torch
 
@@ -170,13 +171,30 @@ def generate_ellipse_path(poses: np.ndarray,
   return np.stack([viewmatrix(p - center, up, p) for p in positions])
 
 
-def generate_path(viewpoint_cameras, n_frames=480):
+def generate_path(viewpoint_cameras, n_frames=480, trajectory="orbit"):
   c2ws = np.array([np.linalg.inv(np.asarray((cam.world_view_transform.T).cpu().numpy())) for cam in viewpoint_cameras])
   pose = c2ws[:,:3,:] @ np.diag([1, -1, -1, 1])
   pose_recenter, colmap_to_world_transform = transform_poses_pca(pose)
 
-  # generate new poses
-  new_poses = generate_ellipse_path(poses=pose_recenter, n_frames=n_frames)
+  # ── pick trajectory ──────────────────────────────────────────────
+  if trajectory == "orbit":
+    new_poses = generate_ellipse_path(poses=pose_recenter, n_frames=n_frames)
+  elif trajectory == "pan":
+      new_poses = _new_poses_pan(pose_recenter, n_frames)
+  elif trajectory == "tilt":
+      new_poses = _new_poses_tilt(pose_recenter, n_frames)
+  elif trajectory == "dolly":
+      new_poses = _new_poses_dolly(pose_recenter, n_frames)
+  elif trajectory == "truck":
+      new_poses = _new_poses_truck(pose_recenter, n_frames)
+  elif trajectory == "pedestal":
+      new_poses = _new_poses_pedestal(pose_recenter, n_frames)
+  elif trajectory == "zoom":
+      new_poses = _new_poses_zoom(pose_recenter, n_frames)
+  else:
+      raise ValueError(f"Unknown trajectory: {trajectory!r}")
+  # ────────────────────────────────────────────────────────────────
+
   # warp back to orignal scale
   new_poses = np.linalg.inv(colmap_to_world_transform) @ pad_poses(new_poses)
 
@@ -190,6 +208,9 @@ def generate_path(viewpoint_cameras, n_frames=480):
       cam.full_proj_transform = (cam.world_view_transform.unsqueeze(0).bmm(cam.projection_matrix.unsqueeze(0))).squeeze(0)
       cam.camera_center = cam.world_view_transform.inverse()[3, :3]
       traj.append(cam)
+  
+  if trajectory == "zoom":
+     traj = _apply_zoom(traj)
 
   return traj
 
