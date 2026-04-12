@@ -1,4 +1,5 @@
 import numpy as np
+from utils.graphics_utils import getProjectionMatrix
 
 def _new_poses_pan(poses, n_frames, pan_angle_deg=60.0):
     base = poses[len(poses) // 2]
@@ -61,15 +62,22 @@ def _apply_zoom(traj, zoom_factor=0.5):
     zoom_factor: fraction to scale tan(FoV/2) by at the end (< 1 = zoom in, > 1 = zoom out)
     """
     n = len(traj)
+    fov0x = traj[0].FoVx
+    fov0y = traj[0].FoVy
+
     for i, cam in enumerate(traj):
         t = i / max(n - 1, 1)
-        scale = 1.0 + t * (zoom_factor - 1.0)  # lerp from 1.0 → zoom_factor
-
-        for attr in ("FoVy", "FoVx"):
-            if hasattr(cam, attr):
-                fov0 = getattr(cam, attr)
-                new_fov = 2 * np.arctan(np.tan(fov0 / 2) * scale)
-                setattr(cam, attr, new_fov)
+        scale = 1.0 + t * (zoom_factor - 1.0)
+        cam.FoVx = 2 * np.arctan(np.tan(fov0x / 2) * scale)
+        cam.FoVy = 2 * np.arctan(np.tan(fov0y / 2) * scale)
+        cam.projection_matrix = getProjectionMatrix(
+            znear=cam.znear, zfar=cam.zfar, fovX=cam.FoVx, fovY=cam.FoVy
+        ).transpose(0, 1).cuda()
+        cam.full_proj_transform = (
+            cam.world_view_transform.unsqueeze(0)
+            .bmm(cam.projection_matrix.unsqueeze(0))
+            .squeeze(0)
+        )
 
     return traj
 

@@ -76,7 +76,7 @@ if __name__ == "__main__":
         n_fames = 240
 
         # "orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"
-        cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory="truck")
+        cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory="orbit")
         gaussExtractor.reconstruction(cam_traj)
         gaussExtractor.export_image(traj_dir)
 
