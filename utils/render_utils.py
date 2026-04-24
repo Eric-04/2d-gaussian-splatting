@@ -22,7 +22,7 @@ from PIL import Image
 import mediapy as media
 from matplotlib import cm
 from tqdm import tqdm
-from utils.traj_utils import _new_poses_pan, _new_poses_tilt, _new_poses_dolly, _new_poses_truck, _new_poses_pedestal, _new_poses_zoom, _apply_zoom
+from utils.traj_utils import new_poses_orbit, new_poses_pan, new_poses_tilt, new_poses_dolly, new_poses_truck, new_poses_pedestal, new_poses_zoom, apply_zoom
 
 import torch
 
@@ -178,19 +178,19 @@ def generate_path(viewpoint_cameras, n_frames=480, trajectory="orbit"):
 
   # ── pick trajectory ──────────────────────────────────────────────
   if trajectory == "orbit":
-    new_poses = generate_ellipse_path(poses=pose_recenter, n_frames=n_frames)
+    new_poses = new_poses_orbit(poses=pose_recenter, n_frames=n_frames)
   elif trajectory == "pan":
-      new_poses = _new_poses_pan(pose_recenter, n_frames)
+    new_poses = new_poses_pan(pose_recenter, n_frames)
   elif trajectory == "tilt":
-      new_poses = _new_poses_tilt(pose_recenter, n_frames)
+    new_poses = new_poses_tilt(pose_recenter, n_frames)
   elif trajectory == "dolly":
-      new_poses = _new_poses_dolly(pose_recenter, n_frames)
+    new_poses = new_poses_dolly(pose_recenter, n_frames)
   elif trajectory == "truck":
-      new_poses = _new_poses_truck(pose_recenter, n_frames)
+    new_poses = new_poses_truck(pose_recenter, n_frames)
   elif trajectory == "pedestal":
-      new_poses = _new_poses_pedestal(pose_recenter, n_frames)
+    new_poses = new_poses_pedestal(pose_recenter, n_frames)
   elif trajectory == "zoom":
-      new_poses = _new_poses_zoom(pose_recenter, n_frames)
+    new_poses = new_poses_zoom(pose_recenter, n_frames)
   else:
       raise ValueError(f"Unknown trajectory: {trajectory!r}")
   # ────────────────────────────────────────────────────────────────
@@ -210,7 +210,7 @@ def generate_path(viewpoint_cameras, n_frames=480, trajectory="orbit"):
       traj.append(cam)
   
   if trajectory == "zoom":
-     traj = _apply_zoom(traj)
+     traj = apply_zoom(traj)
 
   return traj
 

@@ -1,7 +1,34 @@
 import numpy as np
 from utils.graphics_utils import getProjectionMatrix
 
-def _new_poses_pan(poses, n_frames, pan_angle_deg=60.0):
+def new_poses_orbit(poses, n_frames, orbit_deg=360.0):
+    base = poses[len(poses) // 2]
+    R0, t0 = base[:3, :3], base[:3, 3]
+    
+    center = _focus_point_fn(poses)
+    
+    angles = np.linspace(0, np.radians(orbit_deg), n_frames, endpoint=False)
+    
+    # Use world-space up axis for a level horizontal orbit
+    avg_up = poses[:, :3, 1].mean(0)
+    up = avg_up / np.linalg.norm(avg_up)
+    
+    new_poses = []
+    for a in angles:
+        R_orbit = _axis_angle_rotation(up, a)
+        new_t = center + R_orbit @ (t0 - center)
+        # Recompute R from scratch to always face center
+        forward = center - new_t
+        forward = forward / np.linalg.norm(forward)
+        right = np.cross(forward, up)
+        right = right / np.linalg.norm(right)
+        recalc_up = np.cross(right, forward)
+        new_R = np.stack([right, recalc_up, -forward], axis=-1)
+        new_poses.append(np.concatenate([new_R, new_t[:, None]], axis=-1))
+    
+    return np.stack(new_poses)
+
+def new_poses_pan(poses, n_frames, pan_angle_deg=60.0):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     angles = np.linspace(-np.radians(pan_angle_deg/2), np.radians(pan_angle_deg/2), n_frames)
@@ -10,7 +37,7 @@ def _new_poses_pan(poses, n_frames, pan_angle_deg=60.0):
         for a in angles
     ])
 
-def _new_poses_tilt(poses, n_frames, tilt_angle_deg=30.0):
+def new_poses_tilt(poses, n_frames, tilt_angle_deg=30.0):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     angles = np.linspace(-np.radians(tilt_angle_deg/2), np.radians(tilt_angle_deg/2), n_frames)
@@ -19,7 +46,7 @@ def _new_poses_tilt(poses, n_frames, tilt_angle_deg=30.0):
         for a in angles
     ])
 
-def _new_poses_dolly(poses, n_frames, dolly_factor=0.2):
+def new_poses_dolly(poses, n_frames, dolly_factor=0.2):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     depth_range = np.linalg.norm(poses[:, :3, 3].max(0) - poses[:, :3, 3].min(0))
@@ -29,7 +56,7 @@ def _new_poses_dolly(poses, n_frames, dolly_factor=0.2):
         for d in offsets
     ])
 
-def _new_poses_truck(poses, n_frames, truck_factor=0.3):
+def new_poses_truck(poses, n_frames, truck_factor=0.3):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     scene_width = np.linalg.norm(poses[:, :3, 3].max(0) - poses[:, :3, 3].min(0))
@@ -39,7 +66,7 @@ def _new_poses_truck(poses, n_frames, truck_factor=0.3):
         for d in offsets
     ])
 
-def _new_poses_pedestal(poses, n_frames, pedestal_factor=0.3):
+def new_poses_pedestal(poses, n_frames, pedestal_factor=0.3):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     scene_height = np.linalg.norm(poses[:, :3, 3].max(0) - poses[:, :3, 3].min(0))
@@ -50,13 +77,13 @@ def _new_poses_pedestal(poses, n_frames, pedestal_factor=0.3):
     ])
 
 
-def _new_poses_zoom(poses, n_frames):
+def new_poses_zoom(poses, n_frames):
     """Repeat the base pose — position/orientation stays fixed; zoom is applied separately."""
     base = poses[len(poses) // 2]
     return np.stack([base] * n_frames)
 
 
-def _apply_zoom(traj, zoom_factor=0.5):
+def apply_zoom(traj, zoom_factor=0.5):
     """
     Animate FoV from wide to narrow (zoom in) across the trajectory.
     zoom_factor: fraction to scale tan(FoV/2) by at the end (< 1 = zoom in, > 1 = zoom out)
@@ -97,3 +124,11 @@ def _axis_angle_rotation(axis: np.ndarray, angle_rad: float) -> np.ndarray:
         [t*x*y + s*z, t*y*y + c,   t*y*z - s*x],
         [t*x*z - s*y, t*y*z + s*x, t*z*z + c  ],
     ])
+
+def _focus_point_fn(poses: np.ndarray) -> np.ndarray:
+  """Calculate nearest point to all focal axes in poses."""
+  directions, origins = poses[:, :3, 2:3], poses[:, :3, 3:4]
+  m = np.eye(3) - directions * np.transpose(directions, [0, 2, 1])
+  mt_m = np.transpose(m, [0, 2, 1]) @ m
+  focus_pt = np.linalg.inv(mt_m.mean(0)) @ (mt_m @ origins).mean(0)[:, 0]
+  return focus_pt
