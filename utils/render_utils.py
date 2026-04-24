@@ -304,8 +304,8 @@ def create_videos(base_dir, input_dir, out_name, num_frames=480):
       'fps': 60,
       'crf': 18,
   }
-  
-  for k in ['depth', 'normal', 'color']:
+  for k in ['color']:
+  # for k in ['depth', 'normal', 'color']:
     video_file = os.path.join(base_dir, f'{video_prefix}_{k}.mp4')
     input_format = 'gray' if k == 'alpha' else 'rgb'
     

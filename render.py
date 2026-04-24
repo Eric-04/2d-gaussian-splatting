@@ -13,6 +13,7 @@ import torch
 from scene import Scene
 import os
 from tqdm import tqdm
+import numpy as np
 from os import makedirs
 from gaussian_renderer import render
 import torchvision
@@ -76,15 +77,27 @@ if __name__ == "__main__":
         n_fames = 240
 
         # "orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"
-        cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory="orbit")
-        gaussExtractor.reconstruction(cam_traj)
-        gaussExtractor.export_image(traj_dir)
+        TRAJ = ["orbit", "pan", "tilt"]
+        DATASET_DIR = os.path.join(traj_dir, "dataset")
+        # n_trajectories = 3
+        # start_positions = np.random.uniform(-1, 1, (n_trajectories, 3))
+        # lookat_targets  = np.random.uniform(-1, 1, (n_trajectories, 3))
+        # z_variations    = np.random.uniform(0.0, 1.0, (n_trajectories,))
 
-        build_trajectory_dataset(cam_traj, traj_dir)
-        create_videos(base_dir=traj_dir,
-                    input_dir=traj_dir, 
-                    out_name='render_traj', 
-                    num_frames=n_fames)
+        # for i in range(1, n_trajectories+1):
+        for i, traj in enumerate(TRAJ, start=1):
+            dataset_traj_dir = os.path.join(DATASET_DIR, "traj_{:05d}".format(i))
+            os.makedirs(dataset_traj_dir, exist_ok=False)
+
+            cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory=traj)
+            gaussExtractor.reconstruction(cam_traj)
+            gaussExtractor.export_image(traj_dir)
+
+            build_trajectory_dataset(cam_traj, output_dir=dataset_traj_dir, trajectory=traj)
+            create_videos(base_dir=dataset_traj_dir,
+                        input_dir=traj_dir, 
+                        out_name='render_traj', 
+                        num_frames=n_fames)
 
     if not args.skip_mesh:
         print("export mesh ...")
