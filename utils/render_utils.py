@@ -233,9 +233,6 @@ def extract_camera_metadata(cam, frame_idx):
     return {
         "frame_idx": frame_idx,
 
-        # Video pairing
-        "image_path": f"frame_{frame_idx:05d}.png",  # match your render output
-
         # Intrinsics
         "K": K.tolist(),
         "width": W,
@@ -254,15 +251,19 @@ def extract_camera_metadata(cam, frame_idx):
     }
 
 
-def build_trajectory_dataset(traj_cameras, output_dir):
+def build_trajectory_dataset(traj_cameras, output_dir, trajectory):
     """
     traj = generate_path(scene.getTrainCameras(), n_frames=240)
     build_trajectory_dataset(traj, traj_dir)
     """
-    metadata = []
+    # metadata info
+    metadata = {}
+    metadata['motion_type'] = trajectory
+    metadata['video_path'] = "render_traj_color.mp4"
+    metadata['frames_data'] = []
     for i, cam in enumerate(traj_cameras):
         meta = extract_camera_metadata(cam, i)
-        metadata.append(meta)
+        metadata['frames_data'].append(meta)
 
     # Save as JSON alongside your rendered frames
     with open(os.path.join(output_dir, "cameras.json"), "w") as f:
