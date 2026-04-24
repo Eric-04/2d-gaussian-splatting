@@ -19,7 +19,7 @@ def _new_poses_tilt(poses, n_frames, tilt_angle_deg=30.0):
         for a in angles
     ])
 
-def _new_poses_dolly(poses, n_frames, dolly_factor=0.5):
+def _new_poses_dolly(poses, n_frames, dolly_factor=0.2):
     base = poses[len(poses) // 2]
     R0, t0 = base[:3, :3], base[:3, 3]
     depth_range = np.linalg.norm(poses[:, :3, 3].max(0) - poses[:, :3, 3].min(0))
