@@ -202,6 +202,17 @@ def _sample_start_and_lookat(pose_recenter, start_perturb=0.05, lookat_noise=0.1
 
     return start_pos, lookat_target
 
+def _map_param_ranges(p, l1, r1, l2, r2, split=0.5):
+    if not 0 <= p <= 1:
+        raise ValueError("p must be in [0, 1]")
+    
+    if p < split:
+        t = p / split
+        return l1 + t * (r1 - l1)
+    else:
+        t = (p - split) / (1 - split)
+        return l2 + t * (r2 - l2)
+
 def generate_path(viewpoint_cameras, param, n_frames=480, trajectory="orbit"):
   c2ws = np.array([np.linalg.inv(np.asarray((cam.world_view_transform.T).cpu().numpy())) for cam in viewpoint_cameras])
   pose = c2ws[:,:3,:] @ np.diag([1, -1, -1, 1])
@@ -212,20 +223,25 @@ def generate_path(viewpoint_cameras, param, n_frames=480, trajectory="orbit"):
 
   # ── pick trajectory ──────────────────────────────────────────────
   if trajectory == "orbit":
-    orbit_deg = param*360 # [0, 360]
+    orbit_deg = _map_param_ranges(param, -360, -45, 45, 360)
     new_poses = new_poses_orbit(pose_recenter, start_pos, lookat_target, orbit_deg, n_frames)
   elif trajectory == "pan":
-    new_poses = new_poses_pan(pose_recenter, n_frames)
+    pan_angle_deg = _map_param_ranges(param, -90, -30, 30, 90)
+    new_poses = new_poses_pan(pose_recenter, start_pos, lookat_target, pan_angle_deg, n_frames)
   elif trajectory == "tilt":
-    new_poses = new_poses_tilt(pose_recenter, n_frames)
+    tilt_angle_deg = _map_param_ranges(param, -60, -15, 15, 60)
+    new_poses = new_poses_tilt(pose_recenter, start_pos, lookat_target, tilt_angle_deg, n_frames)
   elif trajectory == "dolly":
-    new_poses = new_poses_dolly(pose_recenter, n_frames)
+    dolly_factor = _map_param_ranges(param, -0.3, -0.1, 0.1, 0.3)
+    new_poses = new_poses_dolly(pose_recenter, start_pos, lookat_target, dolly_factor, n_frames)
   elif trajectory == "truck":
-    new_poses = new_poses_truck(pose_recenter, n_frames)
+    truck_factor = _map_param_ranges(param, -0.6, -0.1, 0.1, 0.6)
+    new_poses = new_poses_truck(pose_recenter, start_pos, lookat_target, truck_factor, n_frames)
   elif trajectory == "pedestal":
-    new_poses = new_poses_pedestal(pose_recenter, n_frames)
+    pedestal_factor = _map_param_ranges(param, -0.3, -0.1, 0.1, 0.3)
+    new_poses = new_poses_pedestal(pose_recenter, start_pos, lookat_target, pedestal_factor, n_frames)
   elif trajectory == "zoom":
-    new_poses = new_poses_zoom(pose_recenter, n_frames)
+    new_poses = new_poses_zoom(pose_recenter, start_pos, lookat_target, n_frames)
   else:
       raise ValueError(f"Unknown trajectory: {trajectory!r}")
   # ────────────────────────────────────────────────────────────────
@@ -245,7 +261,8 @@ def generate_path(viewpoint_cameras, param, n_frames=480, trajectory="orbit"):
       traj.append(cam)
   
   if trajectory == "zoom":
-     traj = apply_zoom(traj)
+    zoom_factor = _map_param_ranges(param, 0.2, 0.8, 1.2, 2)
+    traj = apply_zoom(traj, zoom_factor)
 
   return traj
 
