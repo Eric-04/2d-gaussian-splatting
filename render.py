@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
         TRAJECTORIES = ["orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"]
         DATASET_DIR = os.path.join(traj_dir, "dataset")
-        n_trajectories = 3
+        n_trajectories = 25
         params = np.random.uniform(0.0, 1.0, (n_trajectories,))
 
         for idx, traj in enumerate(TRAJECTORIES):

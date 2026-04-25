@@ -3,7 +3,7 @@
 #SBATCH -J surfel_splatting
 #SBATCH -n 4
 #SBATCH --mem=80G
-#SBATCH -t 4:30:00
+#SBATCH -t 20:00:00
 #SBATCH -p gpu
 #SBATCH --gres=gpu:1
 #SBATCH -C ampere
