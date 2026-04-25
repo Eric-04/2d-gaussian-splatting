@@ -81,23 +81,23 @@ if __name__ == "__main__":
         n_trajectories = 3
         params = np.random.uniform(0.0, 1.0, (n_trajectories,))
 
-        traj = TRAJECTORIES[0]
-        offset = 1 + n_trajectories * 0
-        for i in range(n_trajectories):
-            p = params[i]
+        for idx, traj in enumerate(TRAJECTORIES):
+            offset = 1 + n_trajectories * idx
+            for i in range(n_trajectories):
+                p = params[i]
 
-            dataset_traj_dir = os.path.join(DATASET_DIR, "traj_{:05d}".format(i+offset))
-            os.makedirs(dataset_traj_dir, exist_ok=False)
+                dataset_traj_dir = os.path.join(DATASET_DIR, "traj_{:05d}".format(i+offset))
+                os.makedirs(dataset_traj_dir, exist_ok=False)
 
-            cam_traj = generate_path(scene.getTrainCameras(), p, n_frames=n_fames, trajectory=traj)
-            gaussExtractor.reconstruction(cam_traj)
-            gaussExtractor.export_image(traj_dir)
+                cam_traj = generate_path(scene.getTrainCameras(), p, n_frames=n_fames, trajectory=traj)
+                gaussExtractor.reconstruction(cam_traj)
+                gaussExtractor.export_image(traj_dir)
 
-            build_trajectory_dataset(cam_traj, output_dir=dataset_traj_dir, trajectory=traj)
-            create_videos(base_dir=dataset_traj_dir,
-                        input_dir=traj_dir, 
-                        out_name='render_traj', 
-                        num_frames=n_fames)
+                build_trajectory_dataset(cam_traj, output_dir=dataset_traj_dir, trajectory=traj)
+                create_videos(base_dir=dataset_traj_dir,
+                            input_dir=traj_dir, 
+                            out_name='render_traj', 
+                            num_frames=n_fames)
 
     if not args.skip_mesh:
         print("export mesh ...")
