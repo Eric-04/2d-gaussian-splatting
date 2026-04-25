@@ -1,31 +1,31 @@
 import numpy as np
 from utils.graphics_utils import getProjectionMatrix
 
-def new_poses_orbit(poses, n_frames, orbit_deg=360.0):
-    base = poses[len(poses) // 2]
-    R0, t0 = base[:3, :3], base[:3, 3]
-    
-    center = _focus_point_fn(poses)
-    
-    angles = np.linspace(0, np.radians(orbit_deg), n_frames, endpoint=False)
-    
+
+def new_poses_orbit(poses, start_pos, lookat_target, orbit_deg=360.0, n_frames=120):
+    t0 = np.array(start_pos)
+    center = np.array(lookat_target)
+
     # Use world-space up axis for a level horizontal orbit
     avg_up = poses[:, :3, 1].mean(0)
     up = avg_up / np.linalg.norm(avg_up)
-    
+
+    angles = np.linspace(0, np.radians(orbit_deg), n_frames, endpoint=False)
+
     new_poses = []
     for a in angles:
         R_orbit = _axis_angle_rotation(up, a)
         new_t = center + R_orbit @ (t0 - center)
-        # Recompute R from scratch to always face center
-        forward = center - new_t
-        forward = forward / np.linalg.norm(forward)
-        right = np.cross(forward, up)
-        right = right / np.linalg.norm(right)
-        recalc_up = np.cross(right, forward)
-        new_R = np.stack([right, recalc_up, -forward], axis=-1)
+
+        # Recompute look-at from scratch each frame
+        fwd = center - new_t
+        fwd = fwd / np.linalg.norm(fwd)
+        r = np.cross(fwd, up)
+        r = r / np.linalg.norm(r)
+        recalc_up = np.cross(r, fwd)
+        new_R = np.stack([r, recalc_up, -fwd], axis=-1)
         new_poses.append(np.concatenate([new_R, new_t[:, None]], axis=-1))
-    
+
     return np.stack(new_poses)
 
 def new_poses_pan(poses, n_frames, pan_angle_deg=60.0):
@@ -124,11 +124,3 @@ def _axis_angle_rotation(axis: np.ndarray, angle_rad: float) -> np.ndarray:
         [t*x*y + s*z, t*y*y + c,   t*y*z - s*x],
         [t*x*z - s*y, t*y*z + s*x, t*z*z + c  ],
     ])
-
-def _focus_point_fn(poses: np.ndarray) -> np.ndarray:
-  """Calculate nearest point to all focal axes in poses."""
-  directions, origins = poses[:, :3, 2:3], poses[:, :3, 3:4]
-  m = np.eye(3) - directions * np.transpose(directions, [0, 2, 1])
-  mt_m = np.transpose(m, [0, 2, 1]) @ m
-  focus_pt = np.linalg.inv(mt_m.mean(0)) @ (mt_m @ origins).mean(0)[:, 0]
-  return focus_pt

@@ -170,15 +170,50 @@ def generate_ellipse_path(poses: np.ndarray,
 
   return np.stack([viewmatrix(p - center, up, p) for p in positions])
 
+def _sample_start_and_lookat(pose_recenter, start_perturb=0.05, lookat_noise=0.1):
+    """
+    Sample start_pos from a random training camera (in recenter space),
+    and lookat_target by triangulating two random camera rays with noise.
+    """
+    scene_scale = np.linalg.norm(
+        pose_recenter[:, :3, 3].max(0) - pose_recenter[:, :3, 3].min(0)
+    )
 
-def generate_path(viewpoint_cameras, n_frames=480, trajectory="orbit"):
+    # ── start_pos: pick a real training camera + small perturbation ──
+    idx = np.random.randint(len(pose_recenter))
+    base = pose_recenter[idx]
+    noise = np.random.uniform(-start_perturb, start_perturb, 3) * scene_scale
+    start_pos = base[:3, 3] + noise
+
+    # ── lookat: triangulate two random camera rays ──
+    i, j = np.random.choice(len(pose_recenter), 2, replace=False)
+    o1, d1 = pose_recenter[i, :3, 3], -pose_recenter[i, :3, 2]
+    o2, d2 = pose_recenter[j, :3, 3], -pose_recenter[j, :3, 2]
+
+    A = np.stack([d1, -d2], axis=1)
+    b = o2 - o1
+    result, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+    t1 = result[0]
+    lookat = o1 + t1 * d1
+
+    # small noise around triangulated point
+    lookat_noise_vec = np.random.uniform(-lookat_noise, lookat_noise, 3) * scene_scale
+    lookat_target = lookat + lookat_noise_vec
+
+    return start_pos, lookat_target
+
+def generate_path(viewpoint_cameras, param, n_frames=480, trajectory="orbit"):
   c2ws = np.array([np.linalg.inv(np.asarray((cam.world_view_transform.T).cpu().numpy())) for cam in viewpoint_cameras])
   pose = c2ws[:,:3,:] @ np.diag([1, -1, -1, 1])
   pose_recenter, colmap_to_world_transform = transform_poses_pca(pose)
 
+  # ── sample start/lookat in recenter space ───────────────────────
+  start_pos, lookat_target = _sample_start_and_lookat(pose_recenter)
+
   # ── pick trajectory ──────────────────────────────────────────────
   if trajectory == "orbit":
-    new_poses = new_poses_orbit(poses=pose_recenter, n_frames=n_frames)
+    orbit_deg = param*360 # [0, 360]
+    new_poses = new_poses_orbit(pose_recenter, start_pos, lookat_target, orbit_deg, n_frames)
   elif trajectory == "pan":
     new_poses = new_poses_pan(pose_recenter, n_frames)
   elif trajectory == "tilt":

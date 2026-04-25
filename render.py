@@ -76,20 +76,20 @@ if __name__ == "__main__":
         os.makedirs(traj_dir, exist_ok=True)
         n_fames = 240
 
-        # "orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"
-        TRAJ = ["orbit", "pan", "tilt"]
+        TRAJECTORIES = ["orbit", "pan", "tilt", "dolly", "truck", "pedestal", "zoom"]
         DATASET_DIR = os.path.join(traj_dir, "dataset")
-        # n_trajectories = 3
-        # start_positions = np.random.uniform(-1, 1, (n_trajectories, 3))
-        # lookat_targets  = np.random.uniform(-1, 1, (n_trajectories, 3))
-        # z_variations    = np.random.uniform(0.0, 1.0, (n_trajectories,))
+        n_trajectories = 3
+        params = np.random.uniform(0.0, 1.0, (n_trajectories,))
 
-        # for i in range(1, n_trajectories+1):
-        for i, traj in enumerate(TRAJ, start=1):
-            dataset_traj_dir = os.path.join(DATASET_DIR, "traj_{:05d}".format(i))
+        traj = TRAJECTORIES[1]
+        offset = 1 + n_trajectories * 0
+        for i in range(n_trajectories):
+            p = params[i]
+
+            dataset_traj_dir = os.path.join(DATASET_DIR, "traj_{:05d}".format(i+offset))
             os.makedirs(dataset_traj_dir, exist_ok=False)
 
-            cam_traj = generate_path(scene.getTrainCameras(), n_frames=n_fames, trajectory=traj)
+            cam_traj = generate_path(scene.getTrainCameras(), p, n_frames=n_fames, trajectory=traj)
             gaussExtractor.reconstruction(cam_traj)
             gaussExtractor.export_image(traj_dir)
 
