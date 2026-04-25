@@ -81,7 +81,7 @@ if __name__ == "__main__":
         n_trajectories = 3
         params = np.random.uniform(0.0, 1.0, (n_trajectories,))
 
-        traj = TRAJECTORIES[1]
+        traj = TRAJECTORIES[0]
         offset = 1 + n_trajectories * 0
         for i in range(n_trajectories):
             p = params[i]
